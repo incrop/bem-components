@@ -20,6 +20,14 @@ provide(MenuItem.decl({ modName : 'type', modVal : 'link' }, {
         }
     },
 
+    /**
+     * Returns my method
+     * @returns {Boolean}
+     */
+    myMethod : function() {
+        return true;
+    },
+
     _getMenu : function() {
         return this._menu || (this._menu = this.findBlockOutside('menu'));
     },
