@@ -1,10 +1,7 @@
 var DEFAULT_LANGS = ['ru', 'en'],
     fs = require('fs'),
     path = require('path'),
-    docSets = require('enb-bem-docs'),
-    exampleSets = require('enb-bem-examples'),
-    specSets = require('enb-bem-specs'),
-    tmplSets = require('enb-bem-tmpl-specs'),
+    naming = require('bem-naming'),
     levels = require('enb/techs/levels'),
     provide = require('enb/techs/file-provider'),
     bemdeclFromDepsByTech = require('enb/techs/bemdecl-from-deps-by-tech'),
@@ -17,7 +14,6 @@ var DEFAULT_LANGS = ['ru', 'en'],
     js = require('enb-diverse-js/techs/browser-js'),
     ym = require('enb-modules/techs/prepend-modules'),
     bemhtml = require('enb-bemxjst/techs/bemhtml-old'),
-    bemtree = require('enb-bemxjst/techs/bemtree-old'),
     html = require('enb-bemxjst/techs/html-from-bemjson'),
     bh = require('enb-bh/techs/bh-server'),
     bhHtml = require('enb-bh/techs/html-from-bemjson'),
@@ -31,12 +27,17 @@ var DEFAULT_LANGS = ['ru', 'en'],
     };
 
 module.exports = function(config) {
+    config.includeConfig('enb-bem-examples');
+    config.includeConfig('enb-bem-docs');
+    config.includeConfig('enb-bem-specs');
+    config.includeConfig('enb-bem-tmpl-specs');
+
     var sets = {
-            docs : docSets.create('docs', config),
-            examples : exampleSets.create('examples', config),
-            tests : exampleSets.create('tests', config),
-            specs : specSets.create('specs', config),
-            tmplSpecs : tmplSets.create('tmpl-specs', config)
+            tests : config.module('enb-bem-examples').createConfigurator('tests'),
+            examples : config.module('enb-bem-examples').createConfigurator('examples'),
+            docs : config.module('enb-bem-docs').createConfigurator('docs', 'examples'),
+            specs : config.module('enb-bem-specs').createConfigurator('specs'),
+            tmplSpecs : config.module('enb-bem-tmpl-specs').createConfigurator('tmpl-specs')
         },
         langs = process.env.BEM_I18N_LANGS;
 
@@ -54,13 +55,15 @@ module.exports = function(config) {
     configureAutoprefixer('touch-pad', config, sets);
     configureAutoprefixer('touch-phone', config, sets);
 
+    config.nodes(['*.pages/*'], function(nodeConfig) {
+        nodeConfig.addTech([provide, { target : '?.bemjson.js' }]);
+    });
+
     config.nodes(['*.tests/*/*', '*.examples/*/*', '*.pages/*'], function(nodeConfig) {
         var langs = config.getLanguages();
 
         // Base techs
         nodeConfig.addTechs([
-            [provide, { target : '?.bemjson.js' }],
-            [copyFile, { source : '?.bemjson.js', target : '_?.bemjson.js' }],
             [bemdecl],
             [deps],
             [files]
@@ -129,7 +132,7 @@ module.exports = function(config) {
         });
 
         nodeConfig.addTargets([
-            '_?.bemjson.js', '_?.css', '_?.js', '?.html', '?.bh.html'
+            '_?.css', '_?.js', '?.html', '?.bh.html'
         ]);
     });
 
@@ -184,16 +187,26 @@ function configureAutoprefixer(platform, config) {
 }
 
 function configureSets(platform, config, sets) {
-    sets.examples.build({
+    sets.examples.configure({
         destPath : platform + '.examples',
         levels : getLibLevels(platform, config),
-        inlineBemjson : true
+        techSuffixes : ['examples'],
+        fileSuffixes : ['bemjson.js', 'title.txt'],
+        inlineBemjson : true,
+        processInlineBemjson : wrapInPage
     });
 
-    sets.tests.build({
+    sets.tests.configure({
         destPath : platform + '.tests',
         levels : getLibLevels(platform, config),
-        suffixes : ['tests']
+        techSuffixes : ['tests'],
+        fileSuffixes : ['bemjson.js', 'title.txt']
+    });
+
+    sets.docs.configure({
+        destPath : platform + '.docs',
+        levels : getLibLevels(platform, config),
+        exampleSets : [platform + '.examples']
     });
 
     sets.specs.configure({
@@ -205,14 +218,24 @@ function configureSets(platform, config, sets) {
     sets.tmplSpecs.configure({
         destPath : platform + '.tmpl-specs',
         levels : getLibLevels(platform, config),
-        sourceLevels : getSpecLevels(platform, config)
-    });
-
-    sets.docs.configure({
-        destPath : platform + '.docs',
-        levels : getLibLevels(platform, config),
-        examplePattern : [platform + '.examples/?/*', platform + '.tests/?/*'],
-        inlineExamplePattern : platform + '.examples/?/*'
+        sourceLevels : getSpecLevels(platform, config),
+        engines : {
+            bh : {
+                tech : 'enb-bh/techs/bh-server',
+                options : {
+                    jsAttrName : 'data-bem',
+                    jsAttrScheme : 'json'
+                }
+            },
+            'bemhtml-dev' : {
+                tech : 'enb-bemxjst/techs/bemhtml-old',
+                options : { devMode : true }
+            },
+            'bemhtml-prod' : {
+                tech : 'enb-bemxjst/techs/bemhtml-old',
+                options : { devMode : false }
+            }
+        }
     });
 }
 
@@ -277,5 +300,28 @@ function getBrowsers(platform) {
                 'ios 6',
                 'ie 10'
             ];
+    }
+}
+
+function wrapInPage(bemjson, meta) {
+    var basename = '_' + path.basename(meta.filename, '.bemjson.js');
+    return {
+        block : 'page',
+        title : naming.stringify(meta.notation),
+        head : [{ elem : 'css', url : basename + '.css' }],
+        scripts : [{ elem : 'js', url : basename + '.js' }],
+        mods : { theme : getThemeFromBemjson(bemjson) },
+        content : bemjson
+    };
+}
+
+function getThemeFromBemjson(bemjson) {
+    if(typeof bemjson !== 'object') return;
+
+    var theme, key;
+
+    for(key in bemjson) {
+        if(theme = key === 'mods' ? bemjson.mods.theme :
+            getThemeFromBemjson(bemjson[key])) return theme;
     }
 }
