@@ -20,7 +20,7 @@ browsers:
 #    platform: Windows 7
 
 http:
-  timeout: 40000
+  timeout: 80000
   #retries can break the tests if command is
   #actually performed by saucelabs, but response
   #is not received. In this case same command may be
