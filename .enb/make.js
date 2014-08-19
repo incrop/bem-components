@@ -212,7 +212,8 @@ function configureSets(platform, config, sets) {
     sets.specs.configure({
         destPath : platform + '.specs',
         levels : getLibLevels(platform, config),
-        sourceLevels : getSpecLevels(platform, config)
+        sourceLevels : getSpecLevels(platform, config),
+        jsSuffixes : ['vanilla.js', 'browser.js', 'js']
     });
 
     sets.tmplSpecs.configure({
