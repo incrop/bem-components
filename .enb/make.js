@@ -206,7 +206,8 @@ function configureSets(platform, config, sets) {
     sets.docs.configure({
         destPath : platform + '.docs',
         levels : getLibLevels(platform, config),
-        exampleSets : [platform + '.examples']
+        exampleSets : [platform + '.examples'],
+        langs : config.getLanguages()
     });
 
     sets.specs.configure({
