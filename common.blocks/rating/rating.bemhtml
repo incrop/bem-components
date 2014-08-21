@@ -36,6 +36,7 @@ block('rating')(
                 elem : 'label',
                 attrs : {
                     for : this.generateId() + i,
+                    tabindex : 1,
                     title : rate && rate.content
                 }
             }];
