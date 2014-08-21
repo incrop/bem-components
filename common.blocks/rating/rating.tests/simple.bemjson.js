@@ -38,7 +38,7 @@
                 mods : { theme : 'normal', size : size },
                 name : 'rating1' + size,
                 points : 4,
-                length : 10
+                granulation : 10
             },
             { tag : 'h3', content : 'normal ' + size + ' disabled' },
             {
@@ -46,10 +46,8 @@
                 mods : { theme : 'normal', size : size, disabled : true },
                 name : 'rating2' + size,
                 points : 4,
-                length : '7'
-            },
-            { tag : 'hr' }
-
+                granulation : 7
+            }
         ]
     })
 });

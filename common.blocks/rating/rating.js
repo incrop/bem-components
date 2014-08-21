@@ -9,7 +9,7 @@ modules.define('rating', ['i-bem__dom', 'control', 'keyboard__codes'],
                     this.__base.apply(this, arguments);
 
                     this._elemLabels = this.findElem('label');
-                    this._elemLen = this._elemLabels.length + 1;
+                    this._elemLen = this._elemLabels.length + 1; // TODO +1 -1
                     this._hoveredElem = null;
                     this._startMove = true;
 
